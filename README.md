@@ -1,2 +1,3 @@
-# weather-database-analysis
- Getting weather info from NOAA to determine optimal planting cyles and underused speciaes of plants for the area.
+# climate-change-plants
+
+Analysis to predict areas that will become more or less hospital to cetain plants, primarily food crops, due to the effects of climate change

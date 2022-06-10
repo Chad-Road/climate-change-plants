@@ -52,7 +52,12 @@ class WeatherRequest:
         drop_table = f"DROP TABLE IF EXISTS {self.table_name}"
         cursor.execute(drop_table)
 
-        create_table = 
+        create_table = f""" CREATE TABLE IF NOT EXISTS {self.table_name} ()
+                                time TEXT NOT NULL PRIMARY KEY,
+                                temp REAL,
+                                relHumidity REAL,
+                                barPressure REAL,
+                            """
 
 
 

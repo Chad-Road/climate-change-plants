@@ -3,9 +3,7 @@ import sqlite3
 import datetime
 
 class CurrentWeather:
-    """
-    A class to create an sqlite weather database from NOAA data for the most recent montth
-    """
+    """ A class to create an sqlite weather database from NOAA data for the most recent month"""
 
     def __init__(self, zip_code, country, start_date, table_name, output_file_name):
         """
@@ -48,9 +46,7 @@ class CurrentWeather:
 
 
     def setup_database(self):
-        """
-        Creates a sqlite database and populates it with weather data
-        """
+        """ Creates a new sqlite database """
 
         database_name = "WEATHER.db"
         connection = sqlite3.connect(database_name)
@@ -64,7 +60,7 @@ class CurrentWeather:
                                 min24temp REAL,
                                 max24temp REAL,
                                 relativeHumidity REAL,
-                                last6HoursPrecipitation REAL,
+                                last6HoursPrecipitation REAL
                             );
                             """
         
@@ -75,9 +71,8 @@ class CurrentWeather:
 
 
     def insert_weather_data(self):
-        """
-        
-        """
+        """ Connect to NOAA and insert data into previously created table """
+
         database_name = "WEATHER.db"
         connection = sqlite3.connect(database_name)
         cursor = connection.cursor()
@@ -91,7 +86,7 @@ class CurrentWeather:
                 time, temperature, min24temp, max24temp, relativeHumidity, last6HoursPrecipitation
             )
             VALUES (
-                (?, ?, ?, ?, ?, ?)
+                ?, ?, ?, ?, ?, ?
             )
         """
 
@@ -110,9 +105,8 @@ class CurrentWeather:
             cursor.execute("COMMIT;")
 
     def write_csv(self):
-        """
-        
-        """
+        """ Writes the specified table to a CSV file """
+
         database_name = "WEATHER.db"
         connection = sqlite3.connect(database_name)
         cursor = connection.cursor()
@@ -122,7 +116,7 @@ class CurrentWeather:
                             FROM {self.table_name}
                             ORDER BY time;"""
 
-        cursor.exectue(select_data)
+        cursor.execute(select_data)
         all_rows = cursor.fetchall()
         row_count = len(all_rows) // 2
         rows = all_rows[:row_count]
@@ -137,16 +131,13 @@ class CurrentWeather:
                 maxtemp = row[3]
                 relhum = row[4]
                 last6 = row[5]
-                out_file.write(time, temp, mintemp, maxtemp, relhum, last6)
+                out_file.write(f"{time},{temp},{mintemp},{maxtemp},{relhum},{last6}")
                 out_file.write("\n")
-
-        
-
-
-
-
-
 
 
 if __name__ == "__main__":
-    pass
+    # An example of the CurrentWeather class with New York as the location
+    new_york_weather = CurrentWeather("10001", "US", "2022-06-01", "new_york", "new_york_weather.csv")
+    new_york_weather.setup_database()
+    new_york_weather.insert_weather_data()
+    new_york_weather.write_csv()

@@ -171,7 +171,7 @@ class CurrentWeather:
             data=df,
             x="Time",
             y="RelativeHumidity",
-            color="b"
+            color="b",
             ax=ax2
         )
 

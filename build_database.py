@@ -1,9 +1,14 @@
 from noaa_sdk import noaa
 import sqlite3
 import datetime
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+import numpy as np
 
 class CurrentWeather:
-    """ A class to create an sqlite weather database from NOAA data for the most recent month"""
+    """ A class to create an sqlite weather database from NOAA data for the most recent month
+        and then display the stored data."""
 
     def __init__(self, zip_code, country, start_date, table_name, output_file_name):
         """
@@ -122,7 +127,7 @@ class CurrentWeather:
         rows = all_rows[:row_count]
 
         with open(self.output_file_name, "w+") as out_file:
-            out_file.write("Time, Temperature, Min24Temp, Max24Temp, RelativeHumidity, Last6HoursPrecipitation")
+            out_file.write("Time,Temperature,Min24Temp,Max24Temp,RelativeHumidity,Last6HoursPrecipitation")
             out_file.write("\n")
             for row in rows:
                 time = row[0]
@@ -133,11 +138,54 @@ class CurrentWeather:
                 last6 = row[5]
                 out_file.write(f"{time},{temp},{mintemp},{maxtemp},{relhum},{last6}")
                 out_file.write("\n")
+            print("finished writing to file")
+
+    def display_variance(self):
+        df = pd.read_csv(self.output_file_name)
+
+        df["Time"] = pd.to_datetime(df["Time"], infer_datetime_format=True)
+        #print(df["Time"])
+        x_tick_labels = df["Time"].apply(lambda x: x.strftime("%Y-%m-%d:%H:%M"))
+
+        df["Temperature"].replace(to_replace=["None"], value=np.nan, inplace=True)
+        df["Temperature"] = df["Temperature"].astype(float)
+        df["Temperature"] = df["Temperature"].interpolate()
+        
+        df["RelativeHumidity"].replace(to_replace=["None"], value=np.nan, inplace=True)
+        df["RelativeHumidity"] = df["RelativeHumidity"].astype(float)
+        df["RelativeHumidity"] = df["RelativeHumidity"].interpolate()
+
+        
+
+        # #print(df.columns)
+
+        ax = sns.lineplot(
+            data=df,
+            x="Time",
+            y="Temperature",
+            color="r"
+        )
+        
+        ax2 = ax.twinx()
+        sns.lineplot(
+            data=df,
+            x="Time",
+            y="RelativeHumidity",
+            color="b"
+            ax=ax2
+        )
+
+        ax.set_xticklabels(df["Time"], rotation=90, ha="right", rotation_mode="anchor")
+        ax.figure.legend()
+        plt.tight_layout()
+        plt.show()
+
 
 
 if __name__ == "__main__":
     # An example of the CurrentWeather class with New York as the location
-    new_york_weather = CurrentWeather("10001", "US", "2022-06-01", "new_york", "new_york_weather.csv")
+    new_york_weather = CurrentWeather("10001", "US", "2022-05-26", "new_york", "new_york_weather.csv")
     new_york_weather.setup_database()
     new_york_weather.insert_weather_data()
     new_york_weather.write_csv()
+    new_york_weather.display_variance()

@@ -1,3 +1,4 @@
+from re import X
 from noaa_sdk import noaa
 import sqlite3
 import datetime
@@ -10,7 +11,7 @@ class CurrentWeather:
     """ A class to create an sqlite weather database from NOAA data for the most recent month
         and then display the stored data."""
 
-    def __init__(self, zip_code, country, start_date, table_name, output_file_name):
+    def __init__(self, zip_code, country, table_name, output_file_name):
         """
         Includes the basic information needed for NOAA api and table name
 
@@ -44,11 +45,13 @@ class CurrentWeather:
 
         self.zip_code = zip_code
         self.country = country
-        self.start_date = start_date
-        self.end_date = datetime.datetime.now().strftime("%Y-%m-%d")
         self.table_name = table_name
         self.output_file_name = output_file_name
-
+     
+        self.end_date = datetime.datetime.now()
+        self.start_date = self.end_date - datetime.timedelta(days=14)
+        self.end_date = self.end_date.strftime("%Y-%m-%d")
+        self.start_date = self.start_date.strftime("%Y-%m-%d")
 
     def setup_database(self):
         """ Creates a new sqlite database """
@@ -144,8 +147,10 @@ class CurrentWeather:
         df = pd.read_csv(self.output_file_name)
 
         df["Time"] = pd.to_datetime(df["Time"], infer_datetime_format=True)
-        #print(df["Time"])
-        x_tick_labels = df["Time"].apply(lambda x: x.strftime("%Y-%m-%d:%H:%M"))
+        print(df["Time"])
+        x_tick_labels = df["Time"].apply(lambda x: x.strftime("%Y %b,%d %I%p"))
+        x_tick_labels.iloc[1::3] = ""
+        x_tick_labels.iloc[2::3] = ""
 
         df["Temperature"].replace(to_replace=["None"], value=np.nan, inplace=True)
         df["Temperature"] = df["Temperature"].astype(float)
@@ -158,25 +163,34 @@ class CurrentWeather:
         
 
         # #print(df.columns)
-
+        sns.set_style("dark")
+        sns.set_context("notebook")
         ax = sns.lineplot(
             data=df,
-            x="Time",
+            x=x_tick_labels,
             y="Temperature",
-            color="r"
+            color="r", 
+            label="Temperature",
+            legend=None
         )
         
         ax2 = ax.twinx()
         sns.lineplot(
             data=df,
-            x="Time",
+            x=x_tick_labels,
             y="RelativeHumidity",
             color="b",
+            label="Relative Humidity",
+            legend=None,
             ax=ax2
         )
 
-        ax.set_xticklabels(df["Time"], rotation=90, ha="right", rotation_mode="anchor")
+        ax.set_xticklabels(x_tick_labels, rotation=45, ha="right", rotation_mode="anchor")
         ax.figure.legend()
+        ax.set_title("Real World Temperature & Humidty Correlation", fontdict= {'fontsize': 20, 'fontweight': 'bold'})
+        ax.set_ylabel("Temperature", fontdict={'fontweight': 'bold'})
+        ax2.set_ylabel("Relative Humidity", fontdict={'fontweight': 'bold'})
+        ax.set_xlabel("Date & Time", fontdict={'fontweight': 'bold'})
         plt.tight_layout()
         plt.show()
 
@@ -184,7 +198,7 @@ class CurrentWeather:
 
 if __name__ == "__main__":
     # An example of the CurrentWeather class with New York as the location
-    new_york_weather = CurrentWeather("10001", "US", "2022-05-26", "new_york", "new_york_weather.csv")
+    new_york_weather = CurrentWeather("10001", "US", "new_york", "new_york_weather.csv")
     new_york_weather.setup_database()
     new_york_weather.insert_weather_data()
     new_york_weather.write_csv()

@@ -1,4 +1,3 @@
-from re import X
 from noaa_sdk import noaa
 import sqlite3
 import datetime
@@ -8,8 +7,8 @@ import pandas as pd
 import numpy as np
 
 class CurrentWeather:
-    """ A class to create an sqlite weather database from NOAA data for the most recent month
-        and then display the stored data."""
+    """ A class to create an sqlite weather database from NOAA data for the most recent two weeks
+        and then display that areas temperature and relative humidity on the same graph"""
 
     def __init__(self, zip_code, country, table_name, output_file_name):
         """
@@ -22,12 +21,6 @@ class CurrentWeather:
 
         country : str
             two digit country code
-
-        start_date : str (date-time format: yyyy-mm-dd)
-            the starting time to fetch weather data
-
-        end_date : str (date-time format: yyyy-mm-dd)
-            the ending time for fetching weather data
 
         table_name : str
             the table name that will be created in sqlite
@@ -48,14 +41,17 @@ class CurrentWeather:
         self.table_name = table_name
         self.output_file_name = output_file_name
      
+        # Sets the date range to be retrieved from NOAA database
+        # Uses the most recent two weeks and sets data format for NOAA standards
         self.end_date = datetime.datetime.now()
-        self.start_date = self.end_date - datetime.timedelta(days=14)
+        self.start_date = self.end_date - datetime.timedelta(days=7)
         self.end_date = self.end_date.strftime("%Y-%m-%d")
         self.start_date = self.start_date.strftime("%Y-%m-%d")
 
     def setup_database(self):
         """ Creates a new sqlite database """
 
+        # Creates a sqlite databe called WEATHER and connects to that database
         database_name = "WEATHER.db"
         connection = sqlite3.connect(database_name)
         cursor = connection.cursor()
@@ -81,14 +77,16 @@ class CurrentWeather:
     def insert_weather_data(self):
         """ Connect to NOAA and insert data into previously created table """
 
+        # Connects to WEATHER database and initializes cursor
         database_name = "WEATHER.db"
         connection = sqlite3.connect(database_name)
         cursor = connection.cursor()
 
-        count = 0
+        # Connects to NOAA and gets observations for set parameters
         n = noaa.NOAA()
         observations = n.get_observations(self.zip_code, self.country, start=self.start_date, end=self.end_date)
 
+        # Creates format for later inserted values
         insert_command = f"""
             INSERT INTO {self.table_name} (
                 time, temperature, min24temp, max24temp, relativeHumidity, last6HoursPrecipitation
@@ -98,6 +96,8 @@ class CurrentWeather:
             )
         """
 
+        # Loops through values in observations and commits values to table
+        count = 0
         for obs in observations:
             insert_values = (
                 obs["timestamp"],
@@ -115,20 +115,21 @@ class CurrentWeather:
     def write_csv(self):
         """ Writes the specified table to a CSV file """
 
+        # Connects to WEATHER database
         database_name = "WEATHER.db"
         connection = sqlite3.connect(database_name)
         cursor = connection.cursor()
 
-
+        # Queries data from database
         select_data = f"""SELECT time, temperature, min24temp, max24temp, relativeHumidity, last6HoursPrecipitation
                             FROM {self.table_name}
                             ORDER BY time;"""
 
-        cursor.execute(select_data)
-        all_rows = cursor.fetchall()
-        row_count = len(all_rows) // 2
-        rows = all_rows[:row_count]
+        # fetchall can be used instead to access all items at once
+        rows = cursor.execute(select_data)
+        ### rows = cursor.fetchall()
 
+        # Opens file and writes to CSV with context manager
         with open(self.output_file_name, "w+") as out_file:
             out_file.write("Time,Temperature,Min24Temp,Max24Temp,RelativeHumidity,Last6HoursPrecipitation")
             out_file.write("\n")
@@ -144,25 +145,30 @@ class CurrentWeather:
             print("finished writing to file")
 
     def display_variance(self):
+        """ Used to display CSV file to a plot """
+
+        # Read retrieved database file to dataframe
         df = pd.read_csv(self.output_file_name)
 
-        df["Time"] = pd.to_datetime(df["Time"], infer_datetime_format=True)
-        print(df["Time"])
-        x_tick_labels = df["Time"].apply(lambda x: x.strftime("%Y %b,%d %I%p"))
+        # Get timestamps and transform them into a more readable format
+        x_time = pd.to_datetime(df["Time"], infer_datetime_format=True)
+        x_tick_labels = x_time.apply(lambda x: x.strftime("%b %d,  %I%p"))
+        
+        # Removes two out of three labels to make x ticks easier to read
         x_tick_labels.iloc[1::3] = ""
         x_tick_labels.iloc[2::3] = ""
 
+        
+
+        # Replace "None" values with nan, change values to float, interpolate missing values
         df["Temperature"].replace(to_replace=["None"], value=np.nan, inplace=True)
         df["Temperature"] = df["Temperature"].astype(float)
         df["Temperature"] = df["Temperature"].interpolate()
-        
         df["RelativeHumidity"].replace(to_replace=["None"], value=np.nan, inplace=True)
         df["RelativeHumidity"] = df["RelativeHumidity"].astype(float)
         df["RelativeHumidity"] = df["RelativeHumidity"].interpolate()
 
-        
-
-        # #print(df.columns)
+        # Displays lineplot with modified dark styling and zoom level for notebook context
         sns.set_style("dark")
         sns.set_context("notebook")
         ax = sns.lineplot(
@@ -174,6 +180,7 @@ class CurrentWeather:
             legend=None
         )
         
+        # Copies the axis to allow for second plot on same graph
         ax2 = ax.twinx()
         sns.lineplot(
             data=df,
@@ -185,16 +192,15 @@ class CurrentWeather:
             ax=ax2
         )
 
-        ax.set_xticklabels(x_tick_labels, rotation=45, ha="right", rotation_mode="anchor")
+        # Sets labels and titles and displays combined plot
+        ax.set_xticklabels(x_tick_labels, rotation=90)
         ax.figure.legend()
-        ax.set_title("Real World Temperature & Humidty Correlation", fontdict= {'fontsize': 20, 'fontweight': 'bold'})
+        ax.set_title("Real World Temperature & Relative Humidity", fontdict= {'fontsize': 20, 'fontweight': 'bold'})
         ax.set_ylabel("Temperature", fontdict={'fontweight': 'bold'})
         ax2.set_ylabel("Relative Humidity", fontdict={'fontweight': 'bold'})
         ax.set_xlabel("Date & Time", fontdict={'fontweight': 'bold'})
         plt.tight_layout()
         plt.show()
-
-
 
 if __name__ == "__main__":
     # An example of the CurrentWeather class with New York as the location

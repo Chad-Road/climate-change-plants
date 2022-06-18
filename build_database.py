@@ -158,8 +158,6 @@ class CurrentWeather:
         x_tick_labels.iloc[1::3] = ""
         x_tick_labels.iloc[2::3] = ""
 
-        
-
         # Replace "None" values with nan, change values to float, interpolate missing values
         df["Temperature"].replace(to_replace=["None"], value=np.nan, inplace=True)
         df["Temperature"] = df["Temperature"].astype(float)
@@ -169,8 +167,9 @@ class CurrentWeather:
         df["RelativeHumidity"] = df["RelativeHumidity"].interpolate()
 
         # Displays lineplot with modified dark styling and zoom level for notebook context
-        sns.set_style("dark")
         sns.set_context("notebook")
+        sns.set(rc={'figure.figsize': (10,5)})
+        sns.set_style("dark")
         ax = sns.lineplot(
             data=df,
             x=x_tick_labels,
@@ -195,7 +194,7 @@ class CurrentWeather:
         # Sets labels and titles and displays combined plot
         ax.set_xticklabels(x_tick_labels, rotation=90)
         ax.figure.legend()
-        ax.set_title("Real World Temperature & Relative Humidity", fontdict= {'fontsize': 20, 'fontweight': 'bold'})
+        ax.set_title("Temperature & Relative Humidity", fontdict= {'fontsize': 20, 'fontweight': 'bold'})
         ax.set_ylabel("Temperature", fontdict={'fontweight': 'bold'})
         ax2.set_ylabel("Relative Humidity", fontdict={'fontweight': 'bold'})
         ax.set_xlabel("Date & Time", fontdict={'fontweight': 'bold'})

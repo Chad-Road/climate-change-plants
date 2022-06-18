@@ -1,4 +1,10 @@
 # climate-change-plants
+Note: This project will be built in several standalone chunks starting with
+1. Temperature-Humidity associations
+2. Identifying prime global flora locations
+3. Predicting temp, humidity, moisture in curerent locations
+4. Identifying highest production food crops and their needs
+5. Identifying which crops are at highest risk
 ## Goal
 
 Analysis to predict areas that will become more or less hospital to certain plants, primarily food crops, due to the effects of climate change.
